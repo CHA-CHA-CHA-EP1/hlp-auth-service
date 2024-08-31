@@ -1,6 +1,6 @@
 use actix_web::{web, HttpResponse, Responder};
-use serde::Deserialize;
-use crate::domain::auth::{LoginRequest, LoginRequestError};
+use serde::{Deserialize, Serialize};
+use crate::domain::{auth::{LoginRequest, Username}, BaseResponse};
 
 #[derive(Debug, Deserialize)]
 pub struct RawLoginRequest {
@@ -8,15 +8,38 @@ pub struct RawLoginRequest {
     pub password: String,
 }
 
+#[derive(Debug, Serialize)]
+pub struct LoginResponse {
+    #[serde(flatten)]
+    base: BaseResponse,
+    data: Username,
+}
+
+
 pub async fn login(
     raw_request: web::Json<RawLoginRequest>
-) -> Result<impl Responder, LoginRequestError> {
-    // Attempt to create a `LoginRequest` from the provided strings
-    let login_request = LoginRequest::from_str(&raw_request.username, &raw_request.password)?;
-
-    // Handle successful login request creation
-    // You can proceed with further processing like authentication here
-    Ok(HttpResponse::Ok().json(login_request))
+) -> impl Responder {
+    let login_request = LoginRequest::from_str(&raw_request.username, &raw_request.password);
+    match login_request {
+        Ok(v) => {
+            println!("Login request: {:?}", v);
+            let response = LoginResponse {
+                base: BaseResponse {
+                    code: "200".to_string(),
+                    message: "OK".to_string(),
+                },
+                data: v.username,
+            };
+            HttpResponse::Ok().json(response)
+        },
+        Err(e) => {
+            println!("Login request error: {:?}", e);
+            HttpResponse::BadRequest().json(BaseResponse {
+                code: "400".to_string(),
+                message: e.to_string(),
+            })
+        }
+    }
 }
 
 pub async fn logout() -> impl actix_web::Responder {
