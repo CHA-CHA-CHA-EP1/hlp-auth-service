@@ -1,6 +1,10 @@
 use actix_web::web;
 
-pub async fn login() -> impl actix_web::Responder {
+use crate::domain::auth::LoginRequest;
+
+pub async fn login(request: web::Json<LoginRequest>) -> impl actix_web::Responder {
+    let request = request.into_inner();
+    println!("{:?}", request);
     actix_web::HttpResponse::Ok().finish()
 }
 
@@ -15,5 +19,4 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .route("/login", web::post().to(login))
             .route("/logout", web::post().to(logout)),
     );
-
 }

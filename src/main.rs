@@ -1,5 +1,5 @@
 use actix_cors::Cors;
-use actix_web::{get, web, App, HttpServer, Responder};
+use actix_web::{web, App, HttpServer};
 
 use auth_service::controllers;
 
@@ -9,11 +9,12 @@ async fn main() -> std::io::Result<()> {
     println!("Server running at http://0.0.0.0:8080/");
     println!("Press Ctrl+C to stop the server");
 
-    HttpServer::new( move || {
+    HttpServer::new(move || {
         let cors = Cors::default();
         App::new()
             .wrap(cors)
-            .route("/health-check", 
+            .route(
+                "/health-check",
                 web::get().to(controllers::health_check::health_check),
             )
             .configure(controllers::auth_controller::config)
