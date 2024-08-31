@@ -1,7 +1,9 @@
+use std::str::FromStr;
+
 use serde::{Serialize, Deserialize};
 use thiserror::Error;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct Username(String);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Error)]
@@ -10,7 +12,7 @@ pub enum UsernameError {
     TooShort,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct Password(String);
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Error)]
@@ -19,36 +21,52 @@ pub enum PasswordError {
     TooShort,
 }
 
-impl TryFrom<String> for Username {
-    type Error = UsernameError;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        if value.len() < 3 {
+impl FromStr for Username {
+    type Err = UsernameError;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() < 3 {
             Err(UsernameError::TooShort)
         } else {
-            Ok(Username(value))
+            Ok(Username(s.to_string()))
         }
     }
 }
 
-impl TryFrom<String> for Password {
-    type Error = PasswordError;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        if value.len() < 8 {
+impl FromStr for Password {
+    type Err = PasswordError;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.len() < 8 {
             Err(PasswordError::TooShort)
         } else {
-            Ok(Password(value))
+            Ok(Password(s.to_string()))
         }
     }
 }
 
-// API: /auth/login
-// Method: POST
-// Body: { "username": "john_doe", "password": "password123" }
+impl<'de> serde::Deserialize<'de> for Username {
+    fn deserialize<D>(deserializer: D) -> Result<Username, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Username::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Password {
+    fn deserialize<D>(deserializer: D) -> Result<Password, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Password::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct LoginRequest {
-    pub username: String,
-    pub password: String,
+    pub username: Username,
+    pub password: Password,
 }
