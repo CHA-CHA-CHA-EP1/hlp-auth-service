@@ -32,10 +32,6 @@ pub enum LoginRequestError {
 }
 
 impl ResponseError for LoginRequestError {
-    fn status_code(&self) -> actix_web::http::StatusCode {
-        actix_web::http::StatusCode::BAD_REQUEST
-    }
-
     fn error_response(&self) -> actix_web::HttpResponse {
         actix_web::HttpResponse::BadRequest().json(json!({ "message": self.to_string() }))
     }
