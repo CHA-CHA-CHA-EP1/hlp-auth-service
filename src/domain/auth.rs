@@ -1,7 +1,9 @@
 use std::str::FromStr;
 
+use actix_web::ResponseError;
 use serde::{Serialize, Deserialize};
 use thiserror::Error;
+use serde_json::json;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct Username(String);
@@ -19,6 +21,24 @@ pub struct Password(String);
 pub enum PasswordError {
     #[error("Password must be at least 8 characters long")]
     TooShort,
+}
+
+#[derive(Debug, Error)]
+pub enum LoginRequestError {
+    #[error("Username error: {0}")]
+    UsernameError(#[from] UsernameError),
+    #[error("Password error: {0}")]
+    PasswordError(#[from] PasswordError),
+}
+
+impl ResponseError for LoginRequestError {
+    fn status_code(&self) -> actix_web::http::StatusCode {
+        actix_web::http::StatusCode::BAD_REQUEST
+    }
+
+    fn error_response(&self) -> actix_web::HttpResponse {
+        actix_web::HttpResponse::BadRequest().json(json!({ "message": self.to_string() }))
+    }
 }
 
 impl FromStr for Username {
@@ -65,8 +85,18 @@ impl<'de> serde::Deserialize<'de> for Password {
     }
 }
 
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct LoginRequest {
     pub username: Username,
     pub password: Password,
+}
+
+impl LoginRequest {
+    pub fn from_str(username: &str, password: &str) -> Result<Self, LoginRequestError> {
+        Ok(LoginRequest {
+            username: Username::from_str(username)?,
+            password: Password::from_str(password)?,
+        })
+    }
 }
