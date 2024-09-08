@@ -1,6 +1,7 @@
 use actix_web::{web, HttpResponse, Responder};
 use serde::{Deserialize, Serialize};
-use crate::domain::{auth::{LoginRequest, Username}, BaseResponse};
+use validator::Validate;
+use crate::{domain::{auth::{LoginRequest, Username}, user::UserSignup, BaseResponse}, services::auth_service::AuthService, AppState};
 
 #[derive(Debug, Deserialize)]
 pub struct RawLoginRequest {
@@ -17,36 +18,47 @@ pub struct LoginResponse {
 
 
 pub async fn login(
-    raw_request: web::Json<RawLoginRequest>
+    raw_request: web::Json<RawLoginRequest>,
+    service: web::Data<AppState>
 ) -> impl Responder {
     let login_request = LoginRequest::from_str(&raw_request.username, &raw_request.password);
-    match login_request {
-        Ok(v) => {
-            println!("Login request: {:?}", v);
-            let response = LoginResponse {
-                base: BaseResponse {
-                    code: "200".to_string(),
-                    message: "OK".to_string(),
-                },
-                data: v.username,
-            };
-            HttpResponse::Ok().json(response)
-        },
-        Err(e) => {
-            println!("Login request error: {:?}", e);
-            HttpResponse::BadRequest().json(BaseResponse {
-                code: "400".to_string(),
-                message: e.to_string(),
-            })
-        }
+    if let Err(e) = login_request {
+        return HttpResponse::BadRequest().json(BaseResponse {
+            code: "400".to_string(),
+            message: e.to_string(),
+        });
     }
+
+    let login_request = login_request.unwrap();
+    let token = service.auth_service.login(login_request.username, login_request.password).await;
+    
+    if let Err(e) = token {
+        return HttpResponse::Unauthorized().json(BaseResponse {
+            code: "401".to_string(),
+            message: e,
+        });
+    }
+
+    HttpResponse::Ok().json(BaseResponse {
+        code: "200".to_string(),
+        message: "Success".to_string(),
+        //data: login_request.username,
+    })
 }
 
 pub async fn logout() -> impl actix_web::Responder {
     actix_web::HttpResponse::Ok().finish()
 }
 
-pub async fn register() -> impl actix_web::Responder {
+pub async fn register(
+        request: web::Json<UserSignup>
+    ) -> impl actix_web::Responder {
+    if let Err(e) = request.validate() {
+        return actix_web::HttpResponse::BadRequest().json(BaseResponse {
+            code: "400".to_string(),
+            message: e.to_string(),
+        });
+    }
     actix_web::HttpResponse::Ok().finish()
 }
 
