@@ -53,6 +53,18 @@ impl FromStr for Password {
     }
 }
 
+impl Username {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Password {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct LoginRequest {
     pub username: Username,
